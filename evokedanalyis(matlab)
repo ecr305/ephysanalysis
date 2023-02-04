@@ -1,0 +1,143 @@
+ %script for loading and plotting data related to the synaptic current
+%recordings with a 1sec 10Hz stimulus at -70mV and then 0mV
+
+%% Loading data
+% For reference... i = num cell; j = num sweeps per trial; k = condition
+numcells = 1;
+wind = 3201:4200; %10Hz stim window
+
+for i = 1:numcells
+    if i == 1
+        data = analyzedataRWT( '17901' , 13, [4:5 6:8 9:11], 'ECR', 0);
+        
+    elseif i == 2
+        data = analyzedataRWT( '17901' , 6, [85:86 87:89 90:92], 'ECR', 0);
+    elseif i == 3
+        data = analyzedataRWT( '17901' , 8, [110:111 112:114 115:117], 'ECR', 0);
+    elseif i == 4
+        data = analyzedataRWT( '17903' , 4, [20:21 22:24 25:27], 'ECR', 0);
+    elseif i == 5
+        data = analyzedataRWT( '17904' , 2, [9:10 11:13 14:16], 'ECR', 0);
+    elseif i == 6 %beginning of IPSC data
+        data = analyzedataRWT( '17901' , 7, [99:100 101:103 104:106], 'ECR', 0);
+    elseif i == 7
+        data = analyzedataRWT( '17903' , 2, [6:7 8:10 13:15], 'ECR', 0);
+    elseif i == 8
+        data = analyzedataRWT( '17903' , 8, [32:33 34:36 37:39], 'ECR', 0);
+    elseif i == 9
+        data = analyzedataRWT( '17904' , 3, [21:22 23:25 26:28], 'ECR', 0);
+    elseif i == 10
+        data = analyzedataRWT( '17904' , 5, [35:36 37:39 37:39], 'ECR', 0); %NOTE: NO WASH HERE!!!!
+    end
+    
+    c = vertcat(data.trial.voltage); %concatenate all trials taken from one cell
+    c = downsample(c, 20); %downsample to 1kHz
+    c = reshape(c, 15000, length(c)/15000);
+    
+    for j = 1:size(c, 2) %for the number of total sweeps
+        c(:, j) = c(:, j) - mean(c(1:500, j)); %baseline subtract the traces (using first second of protocol)
+    end
+    
+    
+    %Looking at the data, cell by cell
+    figure; set(gcf, 'Color', 'w'); hold on
+    t = 1:length(c(:, 1:40)); t = t/1000;
+    plot(t, c(:, 1:40), 'k')
+    title('Baseline')
+    pause
+    
+    t = 1:length(c(:, 41:100)); t = t/1000;
+    plot(t, c(:, 41:100)+200, 'r')
+    title('LPI')
+    pause
+    
+    t = 1:length(c(:, 101:160)); t = t/1000;
+    plot(t, c(:, 101:160)+400, 'Color', [0.5 0.5 0.5])
+    title('Wash')
+    pause
+    
+    close all
+    
+    %Data over time
+    Baseline_all = c(:, 1:40);
+    LPI_all = c(:, 41:100);
+    Wash_all = c(:, 101:160);
+    
+    B = Baseline_all(wind, :);
+    L = LPI_all(wind, :);
+    W = Wash_all(wind, :);
+    
+    %Pulling out selected trials
+    if i > 5 %for IPSC trials
+        baseline_mean(:, i) = mean(c(:, 2:9), 2);
+        LPI_mean(:, i) = mean(c(:, 81:88), 2);
+        
+        %Amplitude of 1st IPSC over time
+        B_amp(:, i) = max(B(1:100, :));
+        L_amp(:, i) = max(L(1:100, :));
+        W_amp(:, i) = max(W(1:100, :));
+        IPSC_all(:, i) = vertcat(B_amp(:, i), L_amp(:, i), W_amp(:, i));
+        
+        B_IPSC_ppr(:, i) = max(B(101:200, :))./max(B(1:100, :));
+        L_IPSC_ppr(:, i) = max(L(101:200, :))./max(L(1:100, :));
+        W_IPSC_ppr(:, i) = max(W(101:200, :))./max(W(1:100, :));
+        
+        ppr_IPSCs(:, i) = vertcat(B_IPSC_ppr(:, i), L_IPSC_ppr(:, i), W_IPSC_ppr(:, i));
+        
+    elseif i <= 5 %for EPSC trials
+        baseline_mean(:, i) = mean(c(:, 28:35), 2);
+        LPI_mean(:, i) = mean(c(:, 58:65), 2);
+        
+        %Amplitude of 1st EPSC over time
+        B_amp(:, i) = -min(B(1:100, :));
+        L_amp(:, i) = -min(L(1:100, :));
+        W_amp(:, i) = -min(W(1:100, :));
+        EPSC_all(:, i) = vertcat(B_amp(:, i), L_amp(:, i), W_amp(:, i));
+        
+        B_EPSC_ppr(:, i) = -min(B(101:200, :))./-min(B(1:100, :));
+        L_EPSC_ppr(:, i) = -min(L(101:200, :))./-min(L(1:100, :));
+        W_EPSC_ppr(:, i) = -min(W(101:200, :))./-min(W(1:100, :));
+        
+        ppr_EPSCs(:, i) = vertcat(B_EPSC_ppr(:, i), L_EPSC_ppr(:, i), W_EPSC_ppr(:, i));
+        
+    end
+    
+    
+    wash_mean(:, i) = mean(c(:, 121:128), 2);
+    
+    clear c
+    
+end
+
+%% Analyzing data
+
+EPSCs = 1:5; IPSCs = 6:10; %defining cells corresponding to E or I experiments
+
+%Pulling out 1s stimulation window
+Baseline_EPSCs = baseline_mean(wind, EPSCs);
+Baseline_IPSCs = baseline_mean(wind, IPSCs);
+
+LPI_EPSCs = LPI_mean(wind, EPSCs);
+LPI_IPSCs = LPI_mean(wind, IPSCs);
+
+Wash_EPSCs = wash_mean(wind, EPSCs);
+Wash_IPSCs = wash_mean(wind, IPSCs);
+
+for i = 1:5
+    %pulling out maximum E and I PSC amplitudes
+    Baseline_EPSCamps(:, i) = -min(reshape(Baseline_EPSCs(:, i), 100, 10));
+    Baseline_IPSCamps(:, i) = max(reshape(Baseline_IPSCs(:, i), 100, 10));
+    LPI_EPSCamps(:, i) = -min(reshape(LPI_EPSCs(:, i), 100, 10));
+    LPI_IPSCamps(:, i) = max(reshape(LPI_IPSCs(:, i), 100, 10));
+    Wash_EPSCamps(:, i) = -min(reshape(Wash_EPSCs(:, i), 100, 10));
+    Wash_IPSCamps(:, i) = max(reshape(Wash_IPSCs(:, i), 100, 10));
+    
+    %normalizing PSC amplitudes to the first pulse
+    baseline_EPSCampsn(:, i) = Baseline_EPSCamps(:, i) / Baseline_EPSCamps(1, i);
+    baseline_IPSCampsn(:, i) = Baseline_IPSCamps(:, i) / Baseline_IPSCamps(1, i);
+    LPI_EPSCampsn(:, i) = LPI_EPSCamps(:, i) / LPI_EPSCamps(1, i);
+    LPI_IPSCampsn(:, i) = LPI_IPSCamps(:, i) / LPI_IPSCamps(1, i);
+    Wash_EPSCampsn(:, i) = Wash_EPSCamps(:, i) / Wash_EPSCamps(1, i);
+    Wash_IPSCampsn(:, i) = Wash_IPSCamps(:, i) / Wash_IPSCamps(1, i);
+end
+
