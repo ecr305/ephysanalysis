@@ -1,0 +1,366 @@
+clc; close all; clear all;
+
+
+
+%%%%%%%%KO data%%%%%%%%%%%%
+numcellsko=8;
+colname=8;
+taketabs=0;%if you want to take all tabs make taketabs=0;
+
+contcellko=cell(numcellsko,1);
+drugcellko=cell(numcellsko,1);
+for k=1:numcellsko
+    disp(strcat('start cell:',num2str(k)));
+    controlko=[];
+    drugko=[];
+    if k==1
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_GPR55_KO/5-5-16_16505_Cell1.xlsx';
+        tabpre='16505';
+        tabs=NaN(3,2);
+        tabs(1,1)=11;%control start
+        tabs(1,2)=15;%control end
+        
+        tabs(2,1)=20;%drug start
+        tabs(2,2)=24;%drug end
+   
+    elseif k==2
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_GPR55_KO/5-13-16_16513_Cell1.xlsx';
+        tabpre='16513';
+        tabs=NaN(3,2);
+        tabs(1,1)=4;%control start
+        tabs(1,2)=8;%control end
+        
+        tabs(2,1)=21;%drug start
+        tabs(2,2)=25;%drug end     
+   
+    elseif k==3
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_GPR55_KO/5-13-16_16513_Cell2.xlsx';
+        tabpre='16513';
+        tabs=NaN(3,2);
+        tabs(1,1)=49;%control start
+        tabs(1,2)=53;%control end
+        
+        tabs(2,1)=61;%drug start
+        tabs(2,2)=65;%drug end 
+        
+    elseif k==4
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_GPR55_KO/5-17-16_16517_Cell4.xlsx';
+        tabpre='16517';
+        tabs=NaN(3,2);
+        tabs(1,1)=4;%control start
+        tabs(1,2)=8;%control end
+        
+        tabs(2,1)=19;%drug start
+        tabs(2,2)=23;%drug end 
+        
+    elseif k==5
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_GPR55_KO/5-18-16_16518_Cell3.xlsx';
+        tabpre='16518';
+        tabs=NaN(3,2);
+        tabs(1,1)=40;%control start
+        tabs(1,2)=44;%control end
+        
+        tabs(2,1)=50;%drug start
+        tabs(2,2)=54;%drug end 
+        
+    elseif k==6
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_GPR55_KO/5-18-16_16518_Cell4.xlsx';
+        tabpre='16518';
+        tabs=NaN(3,2);
+        tabs(1,1)=98;%control start
+        tabs(1,2)=102;%control end
+        
+        tabs(2,1)=109;%drug start
+        tabs(2,2)=113;%drug end 
+       
+    elseif k==7
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_GPR55_KO/7-13-16_16713_Cell1.xlsx';
+        tabpre='16713';
+        tabs=NaN(3,2);
+        tabs(1,1)=4;%control start
+        tabs(1,2)=8;%control end
+        
+        tabs(2,1)=17;%drug start
+        tabs(2,2)=21;%drug end
+        
+    elseif k==8
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_GPR55_KO/7-27-16_16727_Cell2.xlsx';
+        tabpre='16727';
+        tabs=NaN(3,2);
+        tabs(1,1)=19;%control start
+        tabs(1,2)=22;%control end
+        
+        tabs(2,1)=27;%drug start
+        tabs(2,2)=31;%drug end
+    end
+    if taketabs~=0
+        tabs(1,1)=tabs(1,2)-taketabs+1;
+        tabs(2,2)=tabs(2,1)+taketabs-1;
+        
+    end
+    
+
+    for i=1:2  %we loop three times to go through control, drug and wash
+        for j=tabs(i,1):tabs(i,2)%this loop goes through each tab in the condition
+            if j<10
+                tabname=strcat(tabpre,'00',num2str(j));
+            elseif j>10&&j<100
+                 tabname=strcat(tabpre,'0',num2str(j));
+            elseif j>99
+                tabname=strcat(tabpre,num2str(j));
+            end
+           
+%                     istr=int2str(i);
+            dataraw=xlsread(filepath,tabname,'A2:AF60000');
+            if ~isempty(dataraw)
+                if i==1
+                    controlko=cat(1,controlko,dataraw(:,colname));
+                elseif i==2
+                    drugko=cat(1,drugko,dataraw(:,colname));
+                end
+                clear dataraw;
+            end
+            
+            
+        end
+    end
+    contcellko{k}=abs(controlko);
+    drugcellko{k}=abs(drugko);
+    clear controlko drugko washko
+    disp(strcat('finished cell:',num2str(k)));
+end
+
+xcontko=cell(numcellsko,1);
+xdrugko=cell(numcellsko,1);
+fcontko=cell(numcellsko,1);
+fdrugko=cell(numcellsko,1);
+for u=1:numcellsko
+    [fcontko{u} xcontko{u}]=ecdf(contcellko{u});
+    [fdrugko{u} xdrugko{u}]=ecdf(drugcellko{u});
+end
+
+
+%get the delta in percentage instead of the cumulative distribution
+for b=1:numcellsko
+    for bb=2:length(fcontko{b})
+        fcontko{b}(bb)=fcontko{b}(bb)-sum(fcontko{b}(1:bb-1));
+    end
+    for cc=2:length(fdrugko{b})
+        fdrugko{b}(cc)=fdrugko{b}(cc)-sum(fdrugko{b}(1:cc-1));
+    end
+
+end
+
+fcontsortko=[];
+xcontsortko=[];
+fdrugsortko=[];
+xdrugsortko=[];
+
+for uu=1:numcellsko
+    fcontsortko=cat(1,fcontsortko,fcontko{uu});
+    xcontsortko=cat(1,xcontsortko,xcontko{uu});
+    fdrugsortko=cat(1,fdrugsortko,fdrugko{uu});
+    xdrugsortko=cat(1,xdrugsortko,xdrugko{uu});
+end
+[xcontsortko,Icontko]=sort(xcontsortko);
+fcontsortko=fcontsortko(Icontko);
+[xdrugsortko,Idrugko]=sort(xdrugsortko);
+fdrugsortko=fdrugsortko(Idrugko);
+
+fcontsortcdfko=cumsum(fcontsortko)/sum(fcontsortko);
+fdrugsortcdfko=cumsum(fdrugsortko)/sum(fdrugsortko);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%WT DATA%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+numcells=5;
+colname=8;
+taketabs=0;%if you want to take all tabs make taketabs=0;
+
+contcell=cell(numcells,1);
+drugcell=cell(numcells,1);
+for k=1:numcells
+    disp(strcat('start cell:',num2str(k)));
+    control=[];
+    drug=[];
+    if k==1
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_WT/1-22-16_161220_Cell1';
+        tabpre='16122';
+        tabs=NaN(3,2);
+        tabs(1,1)=6;%control start
+        tabs(1,2)=10;%control end
+        
+        tabs(2,1)=21;%drug start
+        tabs(2,2)=24;%drug end
+        
+    elseif k==2
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_WT/1-24-16_161240_Cell3.xlsx';
+        tabpre='16124';
+        tabs=NaN(3,2);
+        tabs(1,1)=24;%control start
+        tabs(1,2)=28;%control end
+        
+        tabs(2,1)=37;%drug start
+        tabs(2,2)=41;%drug end
+        
+    elseif k==3
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_WT/1-26-16_161260_Cell1.xlsx';
+        tabpre='16126';
+        tabs=NaN(3,2);
+        tabs(1,1)=5;%control start
+        tabs(1,2)=9;%control end
+        
+        tabs(2,1)=18;%drug start
+        tabs(2,2)=22;%drug end
+        
+    elseif k==4
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_WT/1-26-16_161260_Cell2.xlsx';
+        tabpre='16126';
+        tabs=NaN(3,2);
+        tabs(1,1)=42;%control start
+        tabs(1,2)=46;%control end
+        
+        tabs(2,1)=54;%drug start
+        tabs(2,2)=58;%drug end
+        
+    elseif k==5
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_WT/1-27-16_161270_Cell2.xlsx';
+        tabpre='16127';
+        tabs=NaN(3,2);
+        tabs(1,1)=11;%control start
+        tabs(1,2)=15;%control end
+        
+        tabs(2,1)=25;%drug start
+        tabs(2,2)=30;%drug end
+        
+    elseif k==6
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_WT/2-18-16_16218_Cell1.xlsx';
+        tabpre='16218';
+        tabs=NaN(3,2);
+        tabs(1,1)=3;%control start
+        tabs(1,2)=7;%control end
+        
+        tabs(2,1)=17;%drug start
+        tabs(2,2)=21;%drug end
+        
+    elseif k==7
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_WT/3-5-16_16305_Cell2.xlsx';
+        tabpre='16305';
+        tabs=NaN(3,2);
+        tabs(1,1)=7;%control start
+        tabs(1,2)=11;%control end
+        
+        tabs(2,1)=17;%drug start
+        tabs(2,2)=21;%drug end
+    
+    elseif k==8
+        filepath='/Users/ero/Tsien_Lab/Axon/mEPSC_Analysis_EX_VIVO_SLICE/LPI_WT/7-21-16_16721_Cell1.xlsx';
+        tabpre='16721';
+        tabs=NaN(3,2);
+        tabs(1,1)=6;%control start
+        tabs(1,2)=10;%control end
+        
+        tabs(2,1)=19;%drug start
+        tabs(2,2)=23;%drug end
+        
+    end
+    if taketabs~=0
+        tabs(1,1)=tabs(1,2)-taketabs+1;
+        tabs(2,2)=tabs(2,1)+taketabs-1;
+        
+    end
+
+    
+
+    for i=1:2  %we loop three times to go through control, drug and wash
+        for j=tabs(i,1):tabs(i,2)%this loop goes through each tab in the condition
+            if j<10
+                tabname=strcat(tabpre,'00',num2str(j));
+            elseif j>10&&j<100
+                 tabname=strcat(tabpre,'0',num2str(j));
+            elseif j>99
+                tabname=strcat(tabpre,num2str(j));
+            end
+           
+%                     istr=int2str(i);
+            dataraw=xlsread(filepath,tabname,'A2:AF60000');
+            if ~isempty(dataraw)
+                if i==1
+                    control=cat(1,control,dataraw(:,colname));
+                elseif i==2
+                    drug=cat(1,drug,dataraw(:,colname));
+                end
+                clear dataraw;
+            end
+            
+            
+        end
+    end
+    contcell{k}=abs(control);
+    drugcell{k}=abs(drug);
+    clear control drug wash
+    disp(strcat('finished cell:',num2str(k)));
+end
+
+xcont=cell(numcells,1);
+xdrug=cell(numcells,1);
+fcont=cell(numcells,1);
+fdrug=cell(numcells,1);
+for u=1:numcells
+    [fcont{u} xcont{u}]=ecdf(contcell{u});
+    [fdrug{u} xdrug{u}]=ecdf(drugcell{u});
+end
+
+
+%get the delta in percentage instead of the cumulative distribution
+for b=1:numcells
+    for bb=2:length(fcont{b})
+        fcont{b}(bb)=fcont{b}(bb)-sum(fcont{b}(1:bb-1));
+    end
+    for cc=2:length(fdrug{b})
+        fdrug{b}(cc)=fdrug{b}(cc)-sum(fdrug{b}(1:cc-1));
+    end
+
+end
+
+fcontsort=[];
+xcontsort=[];
+fdrugsort=[];
+xdrugsort=[];
+
+for uu=1:numcells
+    fcontsort=cat(1,fcontsort,fcont{uu});
+    xcontsort=cat(1,xcontsort,xcont{uu});
+    fdrugsort=cat(1,fdrugsort,fdrug{uu});
+    xdrugsort=cat(1,xdrugsort,xdrug{uu});
+end
+[xcontsort,Icont]=sort(xcontsort);
+fcontsort=fcontsort(Icont);
+[xdrugsort,Idrug]=sort(xdrugsort);
+fdrugsort=fdrugsort(Idrug);
+
+fcontsortcdf=cumsum(fcontsort)/sum(fcontsort);
+fdrugsortcdf=cumsum(fdrugsort)/sum(fdrugsort);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+figure;
+ plot(xcontsort,100*fcontsortcdf,'g', 'LineWidth', 5);hold on;
+plot(xdrugsort,100*fdrugsortcdf,':g','LineWidth', 5);hold on;
+plot(xcontsortko,100*fcontsortcdfko,'k', 'LineWidth', 5);hold on;
+plot(xdrugsortko,100*fdrugsortcdfko,':k','LineWidth', 5);hold on;
+grey = [0.6 0.6 0.6];
+legend('Control','Drug','ControlKO','DrugKO');
+xlabel('mEPSC Amplitude (pA)','FontSize',20);
+ylabel('Cumulative Probability (%)','FontSize',20);
+
+% figure;hold on;
+% h1=cdfplot(control);hold on;
+% set(h1,'Color','k');
+% h2=cdfplot(drug);hold on;
+% set(h2,'Color','m');
+% h3=cdfplot(wash);
+% set(h3,'Color','b');
+% title('Ampl CDF');
+% xlabel('Ampl (pA)');
+% ylabel('CDF');
+% xlim([0 100]);
